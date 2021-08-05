@@ -54,16 +54,18 @@ export async function sendToken(userAddress, sendData) {
             });
             console.log('>>>>>> Gas Amount', gas);
 
+            const sendData = {
+                from: userAddress,
+                //gas: gas,
+                gasPrice: gasPrice,
+            };
+
+            // Set contract owner fee as payable amount
+            if (gas < gasForSingleTransaction * pageAddresses.length) sendData.value = web3.utils.toWei(`${gasForSingleTransaction * pageAddresses.length - gas}`, 'gwei')
+            
             txArray.push(
-                await multisender.methods.bulkSendTokens(tokenAddress, pageAddresses, pageAmountsToSend)
-                    .send({
-                        from: userAddress,
-                        //gas: gas,
-                        gasPrice: gasPrice,
-                        // Set contract owner fee as payable amount
-                        value: web3.utils.toWei(`${gasForSingleTransaction * pageAddresses.length - gas}`, 'gwei')
-                    })
-            )
+                await multisender.methods.bulkSendTokens(tokenAddress, pageAddresses, pageAmountsToSend).send(sendData)
+            );
         }
         return txArray;
     } catch (e) {

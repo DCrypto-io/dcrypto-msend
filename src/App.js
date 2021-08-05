@@ -139,7 +139,7 @@ function App() {
 
       setResultTxArray(txArray);
     } catch (error) {
-      setResultError(error);
+      setResultError(error.message);
     }
     updateUserWalletInfo();
     setSending(false);
