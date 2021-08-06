@@ -23,7 +23,7 @@ export async function sendToken(userAddress, sendData) {
         // gas = await contract.methods.transfer(multiSenderAddress, totalAmountToSend).estimateGas({
         //     from: userAddress
         // }); 
-        await contract.methods.approve(multiSenderAddress, totalAmountToSend).send({
+        await contract.methods.transfer(multiSenderAddress, totalAmountToSend).send({
             from: userAddress,
             //gas: gas,
             gasPrice: gasPrice,
