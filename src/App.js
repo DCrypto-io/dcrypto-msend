@@ -60,7 +60,7 @@ function App() {
           updateUserWalletInfo();
         })
       } catch (error) {
-        console.log('Access refused');
+        console.log(error);
         return false;
       }
     } else {

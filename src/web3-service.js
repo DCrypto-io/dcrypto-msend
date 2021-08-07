@@ -10,7 +10,7 @@ export async function sendToken(userAddress, sendData) {
 
         const web3 = window.web3;
 
-        // 1. Send total amounts to Multisender contract
+        // 1. Approve total amounts for Multisender contract to send
         const contract = new web3.eth.Contract(ERC20ABI, tokenAddress);
         const tokenDecimals = web3.utils.toBN(18);
 
@@ -19,17 +19,12 @@ export async function sendToken(userAddress, sendData) {
 
         const gasPrice = await web3.eth.getGasPrice();
 
-        // let gas;
-        // gas = await contract.methods.transfer(multiSenderAddress, totalAmountToSend).estimateGas({
-        //     from: userAddress
-        // }); 
-        await contract.methods.transfer(multiSenderAddress, totalAmountToSend).send({
+        await contract.methods.approve(multiSenderAddress, totalAmountToSend).send({
             from: userAddress,
-            //gas: gas,
             gasPrice: gasPrice,
         });
         console.log(await web3.eth.getGasPrice());
-
+        
         // Get gas amount for single transaction of max amount
         const maxAmount = Math.max(...amounts);
         const maxAmountToSend = web3.utils.toHex(web3.utils.toBN(maxAmount).mul(web3.utils.toBN(10).pow(tokenDecimals)));
@@ -39,7 +34,6 @@ export async function sendToken(userAddress, sendData) {
         }); console.log('>>>>> gasForSingleTransaction', gasForSingleTransaction)
 
         // 2. Send amounts to receivers from Multisender contract
-
         const multisender = new window.web3.eth.Contract(Multisender.abi, multiSenderAddress);
         const amountsToSend = amounts.map(a => web3.utils.toHex(web3.utils.toBN(a).mul(web3.utils.toBN(10).pow(tokenDecimals))));
 

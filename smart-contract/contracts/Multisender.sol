@@ -53,7 +53,7 @@ contract Multisender is Ownable {
         return ERC20(_token).balanceOf(_address);
     }
 
-    function sendToken(address _token, address _receiver, uint _amount) public payable {        
+    function sendToken(address _token, address _receiver, uint _amount) public onlyOwner {        
         ERC20(_token).transfer(_receiver, _amount);
     }
     
@@ -65,7 +65,7 @@ contract Multisender is Ownable {
 
         ERC20 token = ERC20(_token);
         for (uint i = 0; i < _receivers.length; i++) {
-            token.transfer(_receivers[i], _amounts[i]);
+            token.transferFrom(msg.sender, _receivers[i], _amounts[i]);
         }
 
         owner.transfer(msg.value);
