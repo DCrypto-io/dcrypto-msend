@@ -114,7 +114,9 @@ function App() {
             if (rows[i]) {
               const cells = rows[i].split(',');
               if (cells.length > 1) {
-                data.push({ address: cells[0].trim(), amount: parseFloat(cells[1].trim()) });
+                const address = cells[0].trim();
+                const amount = parseFloat(cells[1].trim());
+                if (window.web3.utils.isAddress(address)) data.push({ address, amount });
               }
             }
           }
