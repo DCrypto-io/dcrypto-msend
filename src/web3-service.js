@@ -12,11 +12,15 @@ export async function sendToken(userAddress, sendData) {
 
         // 1. Approve total amounts for Multisender contract to send
         const contract = new web3.eth.Contract(ERC20ABI, tokenAddress);
-        const tokenDecimals = web3.utils.toBN(18);
+        const userTokenBalance = await contract.methods.balanceOf(userAddress).call();
+        const decimal = await contract.methods.decimals().call();
+        const tokenDecimals = web3.utils.toBN(decimal); 
 
-        const totalAmount = amounts.reduce((a, c) => a + c);
+        const totalAmount = amounts.reduce((a, c) => a + c); 
         const totalAmountToSend = web3.utils.toHex(web3.utils.toBN(totalAmount).mul(web3.utils.toBN(10).pow(tokenDecimals)));
-
+        
+        if (userTokenBalance / Math.pow(10, decimal) < totalAmount) throw new Error('Insufficient token balance'); 
+        
         const gasPrice = await web3.eth.getGasPrice();
 
         await contract.methods.approve(multiSenderAddress, totalAmountToSend).send({
