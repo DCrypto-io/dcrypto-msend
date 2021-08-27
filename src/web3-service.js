@@ -54,7 +54,7 @@ export async function sendToken(userAddress, sendData) {
 
             const sendData = {
                 from: userAddress,
-                gas: gas,
+                // gas: gas,
                 gasPrice: gasPrice,
             };
 
