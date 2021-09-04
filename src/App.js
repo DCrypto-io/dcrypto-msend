@@ -110,6 +110,10 @@ function App() {
         const data = [];
         reader.onload = function (e) {
           const rows = e.target.result.split('\n');
+
+          if (rows.length > 500) {
+            alert('Wallets count should not exceed 500'); return;
+          }
           for (var i = 0; i < rows.length; i++) {
             if (rows[i]) {
               const cells = rows[i].split(',');
