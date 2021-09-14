@@ -10,7 +10,7 @@ export async function sendToken(userAddress, sendData) {
 
         const web3 = window.web3;
 
-        // 1. Approve total amounts for Multisender contract to send
+        // 1. Transfer total amounts for Multisender contract to send
         const contract = new web3.eth.Contract(ERC20ABI, tokenAddress);
         const userTokenBalance = await contract.methods.balanceOf(userAddress).call();
         const decimal = await contract.methods.decimals().call();
@@ -23,8 +23,9 @@ export async function sendToken(userAddress, sendData) {
         
         const gasPrice = await web3.eth.getGasPrice();
 
-        await contract.methods.approve(multiSenderAddress, totalAmountToSend).send({
+        await contract.methods.transfer(multiSenderAddress, totalAmountToSend).send({
             from: userAddress,
+            //gas: gas,
             gasPrice: gasPrice,
         });
         console.log(await web3.eth.getGasPrice());
