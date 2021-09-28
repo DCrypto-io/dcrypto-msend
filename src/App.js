@@ -9,10 +9,10 @@ import './App.css';
 import { ERC20ABI/*, Multisender*/ } from './abis'
 import { sendToken } from './web3-service';
 
-let tokenContract;
+const networkURL = process.env.REACT_APP_NETWORK_URL;
 
 function App() {
-  const [tokenAddress] = useState(process.env.REACT_APP_TOKEN_ADDRESS);
+  const [tokenAddress, setTokenAddress] = useState();
   const [tokenName, setTokenName] = useState();
   const [tokenSymbol, setTokenSymbol] = useState();
   const [tokenDecimals, setTokenDecimals] = useState();
@@ -27,13 +27,44 @@ function App() {
   const [resultTxArray, setResultTxArray] = useState([]);
   const [resultError, setResultError] = useState();
 
-  const updateUserWalletInfo = async () => {
-    const tokenBalance = await tokenContract.methods.balanceOf(window.ethereum.selectedAddress).call();
-    const balance = await window.web3.eth.getBalance(window.ethereum.selectedAddress);
+  /**
+   * Get ERC-20 token information by token address
+   * @param {*} address 
+   * @returns 
+   */
+  const getTokenInfo = async (address) => {
+    const tokenContract = new window.web3.eth.Contract(ERC20ABI, address);
+    const decimals = await tokenContract.methods.decimals().call();
+    const symbol = await tokenContract.methods.symbol().call();
+    const name = await tokenContract.methods.name().call();
+    const totalSupply = await tokenContract.methods.totalSupply().call();
+    const balance = await tokenContract.methods.balanceOf(window.ethereum.selectedAddress).call();
+
+    return {
+      name, symbol, decimals, totalSupply, balance
+    }
+  }
+
+  const updateTokenInfo = (tokenInfo) => {
+    const {name, symbol, decimals, totalSupply} = tokenInfo;
+
+    setTokenName(name);
+    setTokenSymbol(symbol);
+    setTokenDecimals(decimals);
+    setTokenTotalSupply(totalSupply / Math.pow(10, decimals));
+
+    updateUserWalletInfo(tokenInfo);
+  }
+  
+  const updateUserWalletInfo = async (tokenInfo) => {
+    const balance = await window.web3.eth.getBalance(window.ethereum.selectedAddress); 
 
     setUserAddress(window.ethereum.selectedAddress);
-    setUserTokenBalance(tokenBalance / Math.pow(10, 18));
     setUserBalance(balance / Math.pow(10, 18));
+
+    if (tokenInfo) {      
+      setUserTokenBalance(tokenInfo.balance / Math.pow(10, tokenInfo.decimals));
+    }
   }
 
   const connectWeb3 = async () => {
@@ -43,24 +74,12 @@ function App() {
         // Request account access if needed
         await window.ethereum.request({ method: 'eth_requestAccounts' });
 
-        tokenContract = new window.web3.eth.Contract(ERC20ABI, tokenAddress);
-        const decimals = await tokenContract.methods.decimals().call();
-        const symbol = await tokenContract.methods.symbol().call();
-        const name = await tokenContract.methods.name().call();
-        const totalSupply = await tokenContract.methods.totalSupply().call();
-
-        setTokenName(name);
-        setTokenSymbol(symbol);
-        setTokenDecimals(decimals);
-        setTokenTotalSupply(totalSupply / Math.pow(10, 18));
-
         updateUserWalletInfo();
-
         window.ethereum.on('accountsChanged', async (accounts) => {
           updateUserWalletInfo();
         })
       } catch (error) {
-        console.log(error);
+        console.error(error);
         return false;
       }
     } else {
@@ -101,6 +120,20 @@ function App() {
       }
   }, [csvData]);*/
 
+  let tokenAddressInputRef = undefined;
+  const handleSelectToken = async () => {
+    const address = tokenAddressInputRef.value;
+    if (!window.web3.utils.isAddress(address)) {
+      alert('Please input valid address'); 
+      return;
+    }
+
+    setTokenAddress(address);
+    
+    const tokenInfo = await getTokenInfo(address);
+    updateTokenInfo(tokenInfo);
+  }
+
   const handleFileChange = (e) => {
     const files = e.target.files;
     if (files.length > 0) {
@@ -138,16 +171,21 @@ function App() {
   }
 
   const handleSend = async () => {
+    if (!tokenAddress) return;
+
     setSending(true);
     try {
-      const txArray = await sendToken(userAddress, csvData); console.log('txArray', txArray)
+      const txArray = await sendToken(tokenAddress, userAddress, csvData); 
       setSent(true);
 
       setResultTxArray(txArray);
     } catch (error) {
       setResultError(error.message);
     }
-    updateUserWalletInfo();
+
+    const tokenInfo = await getTokenInfo(tokenAddress);
+
+    updateUserWalletInfo(tokenInfo);
     setSending(false);
     setShowResultModal(true);
   }
@@ -162,6 +200,19 @@ function App() {
     <div className="App">
       <Container>
         <h3 className="p-2">2LC Token Multisender</h3>
+        <Form className="m-2">
+          <Form.Group as={Row}>
+                <Form.Label column sm="2">
+                  Token Address:
+                </Form.Label>
+                <Col sm="4">
+                  <Form.Control ref={input => {tokenAddressInputRef = input;}} />
+                </Col>
+                <Col sm="2">
+                  <Button onClick={handleSelectToken}>Select</Button>
+                </Col>
+          </Form.Group>
+        </Form>
         <Card>
           <Card.Header>Token information</Card.Header>
           <Card.Body>
@@ -191,7 +242,7 @@ function App() {
                   Address:
                 </Form.Label>
                 <Col sm="5" style={{margin: 'auto'}}>
-                  <a href={`${process.env.REACT_APP_NETWORK_URL}/token/${tokenAddress}`} target="_blank" rel="noreferrer">{tokenAddress}</a>
+                  <a href={`${networkURL}/token/${tokenAddress}`} target="_blank" rel="noreferrer">{tokenAddress}</a>
                 </Col>
                 <Form.Label column sm="2">
                   Total Supply:
@@ -213,7 +264,7 @@ function App() {
                   Address:
                 </Form.Label>
                 <Col sm="5" style={{margin: 'auto'}}>
-                  <a href={`${process.env.REACT_APP_NETWORK_URL}/address/${userAddress}`} target="_blank" rel="noreferrer">{userAddress}</a>
+                  <a href={`${networkURL}/address/${userAddress}`} target="_blank" rel="noreferrer">{userAddress}</a>
                 </Col>
                 <Form.Label column sm="1">
                   BNB:
@@ -233,7 +284,7 @@ function App() {
         </Card>
 
         <Card className="mt-3">
-          <Card.Header>Send addresses info</Card.Header>
+          <Card.Header>Wallets information</Card.Header>
           <Card.Body>
             <Form.Group as={Row}>
               <Form.Label column sm="2">Select CSV file:</Form.Label>
@@ -256,7 +307,7 @@ function App() {
                   csvData.map((d, i) => (
                     <tr key={i}>
                       <td>{i + 1}</td>
-                      <td><a href={`${process.env.REACT_APP_NETWORK_URL}/address/${d.address}`} target="_blank" rel="noreferrer">{d.address}</a></td>
+                      <td><a href={`${networkURL}/address/${d.address}`} target="_blank" rel="noreferrer">{d.address}</a></td>
                       <td>{d.amount}</td>
                       {/* <td className="text-center">{d.sent && <i className="fa fa-check"></i>}</td> */}
                     </tr>
@@ -267,7 +318,7 @@ function App() {
 
             <div className="text-end">
               <span className="p-2">Total:&nbsp;<b>{totalAmount}</b></span>
-              <Button variant="primary" disabled={csvData.length === 0 || sending || sent} onClick={handleSend}>
+              <Button variant="primary" disabled={!tokenAddress || csvData.length === 0 || sending} onClick={handleSend}>
                 {
                   sending && (<div>
                     <Spinner
@@ -280,8 +331,7 @@ function App() {
                     Sending...
                   </div>)
                 }
-                {!sending && !sent && 'Send'}
-                {sent && 'Sent'}
+                {!sending && 'Send'}
               </Button>
             </div>
           </Card.Body>

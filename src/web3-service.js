@@ -1,8 +1,8 @@
 import { ERC20ABI, Multisender } from './abis'
 
-export async function sendToken(userAddress, sendData) {
-    const tokenAddress = process.env.REACT_APP_TOKEN_ADDRESS;
+export async function sendToken(tokenAddress, userAddress, sendData) {
     const multiSenderAddress = process.env.REACT_APP_MULTISENDER_ADDRESS;
+    
     const addresses = sendData.map(d => d.address);
     const amounts = sendData.map(d => d.amount);
 
