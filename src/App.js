@@ -144,9 +144,6 @@ function App() {
         reader.onload = function (e) {
           const rows = e.target.result.split('\n');
 
-          if (rows.length > 499) {
-            alert('Wallets count should not exceed 499'); return;
-          }
           for (var i = 0; i < rows.length; i++) {
             if (rows[i]) {
               const cells = rows[i].split(',');
