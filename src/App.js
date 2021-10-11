@@ -6,8 +6,9 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 
 
 import './App.css';
-import { ERC20ABI/*, Multisender*/ } from './abis'
-import { sendToken } from './web3-service';
+import { ERC20ABI } from './abis'
+import { sendToken, sendBNB } from './web3-service';
+import { sum } from './utils'
 
 const networkURL = process.env.REACT_APP_NETWORK_URL;
 
@@ -26,6 +27,7 @@ function App() {
   const [showResultModal, setShowResultModal] = useState(false);
   const [resultTxArray, setResultTxArray] = useState([]);
   const [resultError, setResultError] = useState();
+  const [bnbChecked, setBNBChecked] = useState(false);
 
   /**
    * Get ERC-20 token information by token address
@@ -46,7 +48,7 @@ function App() {
   }
 
   const updateTokenInfo = (tokenInfo) => {
-    const {name, symbol, decimals, totalSupply} = tokenInfo;
+    const { name, symbol, decimals, totalSupply } = tokenInfo;
 
     setTokenName(name);
     setTokenSymbol(symbol);
@@ -55,14 +57,14 @@ function App() {
 
     updateUserWalletInfo(tokenInfo);
   }
-  
+
   const updateUserWalletInfo = async (tokenInfo) => {
-    const balance = await window.web3.eth.getBalance(window.ethereum.selectedAddress); 
+    const balance = await window.web3.eth.getBalance(window.ethereum.selectedAddress);
 
     setUserAddress(window.ethereum.selectedAddress);
     setUserBalance(balance / Math.pow(10, 18));
 
-    if (tokenInfo) {      
+    if (tokenInfo) {
       setUserTokenBalance(tokenInfo.balance / Math.pow(10, tokenInfo.decimals));
     }
   }
@@ -90,48 +92,24 @@ function App() {
   useEffect(() => {
     connectWeb3();
   }, []);
-
-
-  /*useEffect(() => {
-    const multisender = new window.web3.eth.Contract(Multisender.abi, process.env.REACT_APP_MULTISENDER_ADDRESS);
-
-    const subscription = multisender.events.Tokensended({
-      filter: {}, 
-      fromBlock: 'latest'
-    }, function (error, event) { })
-      .on("connected", function (subscriptionId) {
-        console.log(subscriptionId);
-      })
-      .on('data', function (event) {console.log(new Date(), event.returnValues); 
-        csvData.forEach(c => {
-          if (c.address === event.returnValues.toAddress) c.sent = true;
-        });console.log(csvData);
-        setCSVData(csvData);
-      })
-      .on('changed', function (event) {
-        
-      })
-      .on('error', function (error, receipt) { 
-        console.error(error)
-      });
-
-      return () => {
-        subscription.unsubscribe();
-      }
-  }, [csvData]);*/
+  
 
   let tokenAddressInputRef = undefined;
   const handleSelectToken = async () => {
     const address = tokenAddressInputRef.value;
     if (!window.web3.utils.isAddress(address)) {
-      alert('Please input valid address'); 
+      alert('Please input valid address');
       return;
     }
 
     setTokenAddress(address);
-    
+
     const tokenInfo = await getTokenInfo(address);
     updateTokenInfo(tokenInfo);
+  }
+
+  const handleCheckBNB = (e) => {
+    setBNBChecked(e.target.checked)
   }
 
   const handleFileChange = (e) => {
@@ -168,11 +146,11 @@ function App() {
   }
 
   const handleSend = async () => {
-    if (!tokenAddress) return;
+    if (!bnbChecked && !tokenAddress) return;
 
     setSending(true);
     try {
-      const txArray = await sendToken(tokenAddress, userAddress, csvData); 
+      const txArray = bnbChecked ? await sendBNB(csvData) : await sendToken(tokenAddress, userAddress, csvData);
       setSent(true);
 
       setResultTxArray(txArray);
@@ -180,8 +158,10 @@ function App() {
       setResultError(error.message);
     }
 
-    const tokenInfo = await getTokenInfo(tokenAddress);
-
+    let tokenInfo;
+    if (tokenAddress) {
+      tokenInfo = await getTokenInfo(tokenAddress);
+    }
     updateUserWalletInfo(tokenInfo);
     setSending(false);
     setShowResultModal(true);
@@ -191,7 +171,7 @@ function App() {
     setShowResultModal(false);
   }
 
-  const totalAmount = csvData.length > 0 ? csvData.map(d => d.amount).reduce((a, c) => a + c) : 0;
+  const totalAmount = csvData.length > 0 ? sum(csvData.map(d => d.amount)) : 0;
 
   return (
     <div className="App">
@@ -199,15 +179,18 @@ function App() {
         <h3 className="p-2">2LC Token Multisender</h3>
         <Form className="m-2">
           <Form.Group as={Row}>
-                <Form.Label column sm="2">
-                  Token Address:
-                </Form.Label>
-                <Col sm="4">
-                  <Form.Control ref={input => {tokenAddressInputRef = input;}} />
-                </Col>
-                <Col sm="2">
-                  <Button onClick={handleSelectToken}>Select</Button>
-                </Col>
+            <Form.Label column sm="2">
+              Token Address:
+            </Form.Label>
+            <Col sm="4">
+              <Form.Control ref={input => { tokenAddressInputRef = input; }} disabled={bnbChecked} />
+            </Col>
+            <Col sm="2">
+              <Button onClick={handleSelectToken} disabled={bnbChecked}>Select</Button>
+            </Col>
+            <Col sm="2">
+              <Form.Check type="checkbox" label="Send as BNB" checked={bnbChecked} onChange={handleCheckBNB} />
+            </Col>
           </Form.Group>
         </Form>
         <Card>
@@ -238,7 +221,7 @@ function App() {
                 <Form.Label column sm="1">
                   Address:
                 </Form.Label>
-                <Col sm="5" style={{margin: 'auto'}}>
+                <Col sm="5" style={{ margin: 'auto' }}>
                   <a href={`${networkURL}/token/${tokenAddress}`} target="_blank" rel="noreferrer">{tokenAddress}</a>
                 </Col>
                 <Form.Label column sm="2">
@@ -260,7 +243,7 @@ function App() {
                 <Form.Label column sm="1">
                   Address:
                 </Form.Label>
-                <Col sm="5" style={{margin: 'auto'}}>
+                <Col sm="5" style={{ margin: 'auto' }}>
                   <a href={`${networkURL}/address/${userAddress}`} target="_blank" rel="noreferrer">{userAddress}</a>
                 </Col>
                 <Form.Label column sm="1">
@@ -315,7 +298,7 @@ function App() {
 
             <div className="text-end">
               <span className="p-2">Total:&nbsp;<b>{totalAmount}</b></span>
-              <Button variant="primary" disabled={!tokenAddress || csvData.length === 0 || sending} onClick={handleSend}>
+              <Button variant="primary" disabled={(!tokenAddress && !bnbChecked) || csvData.length === 0 || sending} onClick={handleSend}>
                 {
                   sending && (<div>
                     <Spinner

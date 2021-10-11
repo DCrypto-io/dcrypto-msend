@@ -34,8 +34,6 @@ This project is the website to send multiple BEP20 tokens to users wallets using
 
 *`.env` file should be created with the following data*
 
-`REACT_APP_TOKEN_ADDRESS=0x8a08exxxxxxxxxxxxxxxxxxxxxxxxxxxxx`
-
 `REACT_APP_MULTISENDER_ADDRESS=0x076FFxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`
 
 `REACT_APP_NETWORK_URL=https://testnet.bscscan.com or https://bscscan.com`

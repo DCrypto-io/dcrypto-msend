@@ -1,6 +1,6 @@
 import ERC20ABI from './ERC20ABI.json';
-import Multisender from './Multisender.json';
+import MultisenderABI from './Multisender.json';
 
 export {
-    ERC20ABI, Multisender
+    ERC20ABI, MultisenderABI
 }

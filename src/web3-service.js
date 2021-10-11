@@ -1,4 +1,5 @@
-import { ERC20ABI, Multisender } from './abis'
+import { ERC20ABI, MultisenderABI } from './abis'
+import { sum } from './utils'
 
 export async function sendToken(tokenAddress, userAddress, sendData) {
     const multiSenderAddress = process.env.REACT_APP_MULTISENDER_ADDRESS;
@@ -39,7 +40,7 @@ export async function sendToken(tokenAddress, userAddress, sendData) {
         }); console.log('>>>>> gasForSingleTransaction', gasForSingleTransaction)
 
         // 2. Send amounts to receivers from Multisender contract
-        const multisender = new window.web3.eth.Contract(Multisender.abi, multiSenderAddress);
+        const multisender = new window.web3.eth.Contract(MultisenderABI, multiSenderAddress);
         const amountsToSend = amounts.map(a => web3.utils.toHex(web3.utils.toBN(a).mul(web3.utils.toBN(10).pow(tokenDecimals))));
 
         const pageSize = 500;
@@ -64,6 +65,74 @@ export async function sendToken(tokenAddress, userAddress, sendData) {
             
             txArray.push(
                 await multisender.methods.bulkSendTokens(tokenAddress, pageAddresses, pageAmountsToSend).send(sendData)
+            );
+        }
+        return txArray;
+    } catch (e) {
+        console.error(e);
+        throw e;
+    }
+}
+
+export async function sendBNB(sendData) {
+    const userAddress = window.ethereum.selectedAddress;
+    
+    const multiSenderAddress = process.env.REACT_APP_MULTISENDER_ADDRESS;
+    
+    const addresses = sendData.map(d => d.address);
+    const amounts = sendData.map(d => d.amount);
+
+    try {
+
+        const web3 = window.web3;
+
+        // 1. Transfer total amounts for Multisender contract to send
+        const decimal = 18;
+        const userBalance = await window.web3.eth.getBalance(userAddress);  console.log('>>>>> userBalance', userBalance);
+
+        const totalAmount = sum(amounts); 
+        
+        if (userBalance < totalAmount * (10 ** decimal)) throw new Error('Insufficient balance'); 
+        
+        const gasPrice = await web3.eth.getGasPrice();
+        
+        // Get gas amount for single transaction of max amount
+        const maxAmount = Math.max(...amounts);
+        const maxAmountToSend = web3.utils.toHex(web3.utils.toBN(maxAmount * 10 ** decimal));
+
+        const gasForSingleTransaction = await web3.eth.estimateGas({from: userAddress, to: addresses[0], value:maxAmountToSend}); console.log('>>>>> gasForSingleTransaction', gasForSingleTransaction)
+
+        // 2. Send amounts to receivers from Multisender contract
+        const multisender = new window.web3.eth.Contract(MultisenderABI, multiSenderAddress);
+        const amountsToSend = amounts.map(a => web3.utils.toBN(a * 10 ** decimal));
+
+        const pageSize = 500;
+        const txArray = [];
+        for (let i = 0; i <= parseInt(addresses.length / pageSize); i++) {
+            const pageAddresses = addresses.slice(i * pageSize, (i + 1) * pageSize);
+            const pageAmountsToSend = amountsToSend.slice(i * pageSize, (i + 1) * pageSize);
+            let value = pageAmountsToSend.reduce((a, c) => a.add(c)); console.log('=============', web3.utils.toHex(value))
+
+            const gas = await multisender.methods.bulkSendBNB(pageAddresses, pageAmountsToSend).estimateGas({
+                from: userAddress,
+                value: web3.utils.toHex(value)
+            });
+            console.log('>>>>>> Gas Amount', gas);
+
+            const sendData = {
+                from: userAddress,
+                // gas: gas,
+                gasPrice: gasPrice
+            };
+
+            // Set contract owner fee as payable amount
+            if (gas < gasForSingleTransaction * pageAddresses.length) 
+                value = value.add(web3.utils.toBN(gasForSingleTransaction * pageAddresses.length - gas))
+            
+            sendData.value = web3.utils.toHex(value);
+            console.log('>>>>>>>>>>>>> senddata', sendData);
+            txArray.push(
+                await multisender.methods.bulkSendBNB(pageAddresses, pageAmountsToSend).send(sendData)
             );
         }
         return txArray;

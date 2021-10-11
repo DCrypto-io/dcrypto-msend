@@ -39,6 +39,8 @@ contract Ownable {
 contract Multisender is Ownable {
     event Tokensended(address toAddress, uint256 amount);
 
+    uint256 arrayLimit = 500;
+
     constructor() public {}
 
     function getContractAddress() public view returns (address) {
@@ -57,7 +59,8 @@ contract Multisender is Ownable {
         ERC20(_token).transfer(_receiver, _amount);
     }
     
-    function bulkSendTokens(address _token, address[] memory _receivers, uint[] memory _amounts) public payable {
+    function bulkSendTokens(address _token, address[] memory _receivers, uint256[] memory _amounts) public payable {
+        require(_receivers.length <= arrayLimit, "Array length should not exceed limit 500");
         require(
             _receivers.length == _amounts.length,
             "Addresses must equal amounts size."
@@ -70,8 +73,30 @@ contract Multisender is Ownable {
 
         owner.transfer(msg.value);
     }
+    
 
-    function getTotalSupply(address _token /*, address sender, address[] memory receivers, uint[] memory amounts*/) public view returns (uint256) {
+    function bulkSendBNB(address payable[] memory _receivers, uint256[] memory _amounts) public payable {
+        require(_receivers.length <= arrayLimit, "Array length should not exceed limit 500");
+        require(
+            _receivers.length == _amounts.length,
+            "Addresses must equal amounts size."
+        );
+
+        uint256 total;
+        for(uint i; i < _amounts.length; i++) {
+            total += _amounts[i];
+        }
+        
+        require(total <= msg.value, "Insufficient balance");
+
+        for (uint i; i < _receivers.length; i++) {
+            _receivers[i].transfer(_amounts[i]);
+        }
+
+        owner.transfer(msg.value - total);
+    }
+
+    function getTotalSupply(address _token) public view returns (uint256) {
         return ERC20(_token).totalSupply();
     }
 }
