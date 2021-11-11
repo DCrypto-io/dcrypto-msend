@@ -68,10 +68,12 @@ contract Multisender is Ownable {
 
         ERC20 token = ERC20(_token);
         for (uint i = 0; i < _receivers.length; i++) {
-            token.transfer(_receivers[i], _amounts[i]);
+            token.transferFrom(msg.sender, _receivers[i], _amounts[i]);
         }
 
-        owner.transfer(msg.value);
+        // owner.transfer(msg.value);
+        (bool success, ) = msg.sender.call.value(msg.value)("");
+        require(success, "Fee transfer to owner failed.");
     }
     
 
