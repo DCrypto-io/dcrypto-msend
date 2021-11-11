@@ -24,12 +24,18 @@ export async function sendToken(tokenAddress, userAddress, sendData) {
         
         const gasPrice = await web3.eth.getGasPrice();
 
-        await contract.methods.transfer(multiSenderAddress, totalAmountToSend).send({
+        await contract.methods.approve(multiSenderAddress, totalAmountToSend).send({
             from: userAddress,
             //gas: gas,
             gasPrice: gasPrice,
         });
-        console.log(await web3.eth.getGasPrice());
+
+        // await contract.methods.transfer(multiSenderAddress, totalAmountToSend).send({
+        //     from: userAddress,
+        //     //gas: gas,
+        //     gasPrice: gasPrice,
+        // });
+        console.log('>>> gasPrice', await web3.eth.getGasPrice());
         
         // Get gas amount for single transaction of max amount
         const maxAmount = Math.max(...amounts);
